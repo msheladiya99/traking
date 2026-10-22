@@ -11,7 +11,10 @@ import {
   Check, 
   ExternalLink, 
   ShieldCheck, 
-  ShieldOff 
+  ShieldOff,
+  Edit2,
+  Mail,
+  Phone
 } from 'lucide-react';
 import { AdminLayout } from '../../components/admin/AdminLayout';
 import { fetchOrderDetails, generateTrackingLink, toggleTracking } from '../../services/api';
@@ -19,6 +22,8 @@ import { OrderItem } from '../../types';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { Spinner } from '../../components/ui/Spinner';
+import { EditAddressModal } from '../../components/admin/EditAddressModal';
+import { SendTrackingEmailModal } from '../../components/admin/SendTrackingEmailModal';
 
 export const AdminOrderDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -28,6 +33,8 @@ export const AdminOrderDetailPage: React.FC = () => {
   const [copied, setCopied] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isToggling, setIsToggling] = useState(false);
+  const [isEditAddressOpen, setIsEditAddressOpen] = useState(false);
+  const [isSendMailOpen, setIsSendMailOpen] = useState(false);
 
   const loadOrder = async () => {
     if (!id) return;
@@ -178,6 +185,12 @@ export const AdminOrderDetailPage: React.FC = () => {
                   <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold block">Email</span>
                   <span className="font-medium text-slate-700">{order.email}</span>
                 </div>
+                {order.phone && (
+                  <div>
+                    <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold block">Phone</span>
+                    <span className="font-medium text-slate-700">{order.phone}</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -185,13 +198,24 @@ export const AdminOrderDetailPage: React.FC = () => {
           {/* Delivery & Tracking Info */}
           <div className="space-y-6">
             <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
-              <div className="flex items-center space-x-2.5 text-slate-900 font-bold border-b border-slate-100 pb-3">
-                <MapPin className="h-5 w-5 text-brand-600" />
-                <span>DELIVERY INFORMATION</span>
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div className="flex items-center space-x-2.5 text-slate-900 font-bold">
+                  <MapPin className="h-5 w-5 text-brand-600" />
+                  <span>DELIVERY ADDRESS</span>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsEditAddressOpen(true)}
+                  className="py-1 px-3 text-xs h-8"
+                >
+                  <Edit2 className="h-3.5 w-3.5 mr-1.5" />
+                  <span>Edit Address</span>
+                </Button>
               </div>
-              <div className="text-sm space-y-1">
-                <p className="font-semibold text-slate-900">{order.address}</p>
-                <p className="text-slate-600">{order.city}, {order.state} - {order.pin}</p>
+              <div className="text-sm space-y-1 bg-slate-50 p-3.5 rounded-xl border border-slate-200/80">
+                <p className="font-semibold text-slate-900">{order.address || 'No street address provided'}</p>
+                <p className="text-slate-600">{order.city ? `${order.city}, ` : ''}{order.state} - {order.pin}</p>
               </div>
             </div>
 
@@ -241,6 +265,18 @@ export const AdminOrderDetailPage: React.FC = () => {
                     </div>
                   </div>
 
+                  <div className="pt-2">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => setIsSendMailOpen(true)}
+                      className="w-full justify-center bg-brand-50 text-brand-800 border-brand-200 hover:bg-brand-100"
+                    >
+                      <Mail className="h-4 w-4 mr-2" />
+                      <span>Send Tracking Email to Customer</span>
+                    </Button>
+                  </div>
+
                   <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100">
                     <div>
                       <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold block">
@@ -269,6 +305,26 @@ export const AdminOrderDetailPage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Edit Address Submodal */}
+      <EditAddressModal
+        order={order}
+        isOpen={isEditAddressOpen}
+        onClose={() => setIsEditAddressOpen(false)}
+        onAddressUpdated={() => {
+          loadOrder();
+        }}
+      />
+
+      {/* Send Email Submodal */}
+      <SendTrackingEmailModal
+        order={order}
+        isOpen={isSendMailOpen}
+        onClose={() => setIsSendMailOpen(false)}
+        onSuccess={() => {
+          loadOrder();
+        }}
+      />
     </AdminLayout>
   );
 };

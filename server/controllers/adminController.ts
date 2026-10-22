@@ -147,6 +147,8 @@ export async function toggleTracking(req: Request, res: Response, next: NextFunc
 export async function sendTrackingEmailRoute(req: Request, res: Response, next: NextFunction) {
   try {
     const { id } = req.params;
+    const { recipientEmail } = req.body || {};
+
     const trackingData = await orderService.generateOrGetTrackingToken(id);
 
     if (!trackingData || !trackingData.tracking_token) {
@@ -161,13 +163,91 @@ export async function sendTrackingEmailRoute(req: Request, res: Response, next: 
       return res.status(404).json({ success: false, message: 'Order not found.' });
     }
 
-    await emailService.sendTrackingEmail(order, trackingUrl);
+    const targetEmail = (recipientEmail && recipientEmail.trim()) || order.email;
+    if (!targetEmail) {
+      return res.status(400).json({ success: false, message: 'Please provide a valid recipient email address.' });
+    }
+
+    const result = await emailService.sendTrackingEmail(order, trackingUrl, targetEmail);
 
     return res.json({
       success: true,
-      message: 'Email sent successfully.',
+      message: `Tracking email sent successfully to ${targetEmail}.`,
+      data: result,
     });
-  } catch (error) {
-    next(error);
+  } catch (error: any) {
+    console.error('Error sending tracking email:', error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to send tracking email.',
+    });
   }
 }
+
+export async function updateOrderAddress(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { id } = req.params;
+    const { address, city, state, pin, customerName, first_name, last_name, email, phone, total_amount } = req.body;
+
+    const updated = await orderService.updateOrderAddress(id, {
+      address,
+      city,
+      state,
+      pin,
+      customerName,
+      first_name,
+      last_name,
+      email,
+      phone,
+      total_amount,
+    });
+
+    return res.json({
+      success: true,
+      message: 'Address and customer details updated successfully.',
+      order: updated,
+    });
+  } catch (error: any) {
+    console.error('Error updating order address:', error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to update order address.',
+    });
+  }
+}
+
+export async function createOrder(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { orderId, customerName, email, phone, address, city, state, pin, total_amount, product_name } = req.body;
+
+    if (!email || !address || !city) {
+      return res.status(400).json({ success: false, message: 'Email, address, and city are required.' });
+    }
+
+    const newOrder = await orderService.createManualOrder({
+      orderId,
+      customerName: customerName || 'Customer',
+      email,
+      phone,
+      address,
+      city,
+      state: state || 'Gujarat',
+      pin: pin || '',
+      total_amount: total_amount || '1999',
+      product_name: product_name || 'Premium Ghaghra Choli',
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: 'Manual order created successfully.',
+      order: newOrder,
+    });
+  } catch (error: any) {
+    console.error('Error creating manual order:', error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to create manual order.',
+    });
+  }
+}
+

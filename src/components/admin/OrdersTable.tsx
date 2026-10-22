@@ -10,7 +10,8 @@ import {
   ChevronRight,
   Sparkles,
   Filter,
-  Mail
+  Mail,
+  Edit2
 } from 'lucide-react';
 import { OrderItem } from '../../types';
 import { Button } from '../ui/Button';
@@ -30,6 +31,7 @@ interface OrdersTableProps {
   onViewOrder: (order: OrderItem) => void;
   onGenerateTracking: (order: OrderItem) => void;
   onSendEmail: (order: OrderItem) => void;
+  onEditAddress?: (order: OrderItem) => void;
   isLoading?: boolean;
 }
 
@@ -42,6 +44,7 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
   onViewOrder,
   onGenerateTracking,
   onSendEmail,
+  onEditAddress,
   isLoading = false,
 }) => {
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -246,6 +249,19 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
                         <Eye className="h-3.5 w-3.5" />
                         <span>View</span>
                       </Button>
+
+                      {onEditAddress && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => onEditAddress(order)}
+                          title="Edit Delivery Address"
+                          className="text-slate-600 hover:text-brand-700"
+                        >
+                          <Edit2 className="h-3.5 w-3.5" />
+                          <span>Address</span>
+                        </Button>
+                      )}
 
                       {!order.tracking_token ? (
                         <Button

@@ -110,16 +110,66 @@ export async function generateTrackingLink(id: string): Promise<{ tracking_token
   return data.data;
 }
 
-export async function sendTrackingEmail(id: string): Promise<boolean> {
+export async function sendTrackingEmail(id: string, recipientEmail?: string): Promise<{ success: boolean; message: string }> {
   const res = await fetch(`${API_BASE}/admin/orders/${id}/send-email`, {
     method: 'POST',
     headers: getAuthHeaders(),
+    body: JSON.stringify({ recipientEmail }),
   });
   const data = await res.json();
   if (!res.ok || !data.success) {
     throw new Error(data.message || 'Failed to send tracking email.');
   }
-  return data.success;
+  return data;
+}
+
+export async function updateOrderAddress(
+  id: string,
+  data: {
+    address?: string;
+    city?: string;
+    state?: string;
+    pin?: string;
+    customerName?: string;
+    email?: string;
+    phone?: string;
+    total_amount?: string;
+  }
+): Promise<OrderItem> {
+  const res = await fetch(`${API_BASE}/admin/orders/${id}/address`, {
+    method: 'PUT',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(data),
+  });
+  const json = await res.json();
+  if (!res.ok || !json.success) {
+    throw new Error(json.message || 'Failed to update order address.');
+  }
+  return json.order;
+}
+
+export async function createManualOrder(data: {
+  orderId?: string;
+  customerName: string;
+  email: string;
+  phone?: string;
+  address: string;
+  city: string;
+  state: string;
+  pin: string;
+  total_amount?: string;
+  product_name?: string;
+}): Promise<OrderItem> {
+  const res = await fetch(`${API_BASE}/admin/orders`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(data),
+  });
+  const json = await res.json();
+  if (!res.ok || !json.success) {
+    throw new Error(json.message || 'Failed to create manual order.');
+  }
+  return json.order;
 }
 
 export async function toggleTracking(id: string, enabled: boolean): Promise<{ tracking_enabled: boolean }> {

@@ -57,6 +57,7 @@ export interface OrderItem {
   id: string;
   orderId: string;
   email: string;
+  phone?: string;
   first_name: string;
   last_name: string;
   customerName: string;

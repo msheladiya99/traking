@@ -102,6 +102,7 @@ export async function getOrders(options: OrderQueryOptions) {
       id: doc._id.toString(),
       orderId: doc.order_id || doc._id.toString().substring(0, 8).toUpperCase(),
       email: doc.email || '',
+      phone: doc.phone || '',
       first_name: doc.first_name || '',
       last_name: doc.last_name || '',
       customerName: `${doc.first_name || ''} ${doc.last_name || ''}`.trim() || 'Customer',
@@ -165,6 +166,7 @@ export async function getOrderById(idString: string) {
     id: doc._id.toString(),
     orderId: doc.order_id || doc._id.toString().substring(0, 8).toUpperCase(),
     email: doc.email || '',
+    phone: doc.phone || '',
     first_name: doc.first_name || '',
     last_name: doc.last_name || '',
     customerName: `${doc.first_name || ''} ${doc.last_name || ''}`.trim() || 'Customer',
@@ -448,3 +450,98 @@ function buildSimulatedPublicOrder(orderNum: string) {
     timeline,
   };
 }
+
+export async function updateOrderAddress(idString: string, updateData: {
+  address?: string;
+  city?: string;
+  state?: string;
+  pin?: string;
+  customerName?: string;
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  phone?: string;
+  total_amount?: string;
+}) {
+  const collection = await getOrdersCollection();
+  
+  let query: any = {};
+  if (ObjectId.isValid(idString)) {
+    query = { _id: new ObjectId(idString) };
+  } else {
+    query = { order_id: idString };
+  }
+
+  const setFields: any = {};
+  if (updateData.address !== undefined) setFields.address = updateData.address.trim();
+  if (updateData.city !== undefined) setFields.city = updateData.city.trim();
+  if (updateData.state !== undefined) setFields.state = updateData.state.trim();
+  if (updateData.pin !== undefined) setFields.pin = updateData.pin.trim();
+  if (updateData.email !== undefined) setFields.email = updateData.email.trim();
+  if (updateData.phone !== undefined) setFields.phone = updateData.phone.trim();
+  if (updateData.total_amount !== undefined) setFields.total_amount = updateData.total_amount.toString().trim();
+
+  if (updateData.customerName !== undefined) {
+    const parts = updateData.customerName.trim().split(' ');
+    setFields.first_name = parts[0] || '';
+    setFields.last_name = parts.slice(1).join(' ') || '';
+  } else {
+    if (updateData.first_name !== undefined) setFields.first_name = updateData.first_name.trim();
+    if (updateData.last_name !== undefined) setFields.last_name = updateData.last_name.trim();
+  }
+
+  const result = await collection.updateOne(query, { $set: setFields });
+  if (result.matchedCount === 0) {
+    throw new Error('Order not found');
+  }
+
+  return await getOrderById(idString);
+}
+
+export async function createManualOrder(orderData: {
+  orderId?: string;
+  customerName: string;
+  email: string;
+  phone?: string;
+  address: string;
+  city: string;
+  state: string;
+  pin: string;
+  total_amount?: string;
+  product_name?: string;
+}) {
+  const collection = await getOrdersCollection();
+
+  // Generate order ID if not provided
+  const orderId = orderData.orderId?.trim() || `VAS${Math.floor(100000 + Math.random() * 900000)}`;
+  
+  // Name split
+  const nameParts = (orderData.customerName || 'Customer').trim().split(' ');
+  const firstName = nameParts[0] || 'Customer';
+  const lastName = nameParts.slice(1).join(' ') || '';
+
+  const trackingToken = generateSecureToken(12);
+  const now = new Date().toISOString();
+
+  const doc = {
+    order_id: orderId,
+    email: orderData.email.trim(),
+    phone: orderData.phone?.trim() || '',
+    first_name: firstName,
+    last_name: lastName,
+    address: orderData.address.trim(),
+    city: orderData.city.trim(),
+    state: orderData.state.trim() || 'Gujarat',
+    pin: orderData.pin.trim(),
+    total_amount: orderData.total_amount?.toString().trim() || '1999',
+    product_name: orderData.product_name?.trim() || 'Premium Ghaghra Choli',
+    order_time: now,
+    tracking_token: trackingToken,
+    tracking_enabled: true,
+    tracking_created_at: now,
+  };
+
+  const insertResult = await collection.insertOne(doc);
+  return await getOrderById(insertResult.insertedId.toString());
+}
+
